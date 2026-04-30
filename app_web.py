@@ -9,8 +9,8 @@ from extractor_ia import consultar_chatbot
 st.set_page_config(page_title="Analista SSPP", page_icon="⚡", layout="wide")
 
 # Rutas de tus archivos locales (Verifica que la del logo sea correcta)
-RUTA_EXCEL = r"C:\Users\JoseGabrielBlandonHe\OneDrive - Pactia\01 JEFATURA PY\2. Energia\Proyecto SSPP\Datos_SSPP.xlsx"
-RUTA_LOGO = r"C:\Users\JoseGabrielBlandonHe\OneDrive - Pactia\01 JEFATURA PY\2. Energia\Proyecto SSPP\Diseños\New Logo PACTIA.png"
+RUTA_EXCEL = "Datos_SSPP.xlsx"
+RUTA_LOGO = "New Logo PACTIA.png"
 
 # Inyectamos diseño corporativo para la tipografía general
 st.markdown("""
