@@ -8,7 +8,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 archivos_procesados_memoria = set()
 
 # --- RUTAS DE ARCHIVOS ---
-ruta_excel = r"C:\Users\JoseGabrielBlandonHe\OneDrive - Pactia\01 JEFATURA PY\2. Energia\Proyecto SSPP\Datos_SSPP.xlsx"
+ruta_excel = "Datos_SSPP.xlsx"
 
 carpetas_edificios = {
     "Buró 51": r"C:\Users\JoseGabrielBlandonHe\OneDrive - Pactia\01 JEFATURA PY\2. Energia\Proyecto SSPP\Facturas\Buro 51",
