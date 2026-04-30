@@ -3,11 +3,16 @@ import time
 import json
 import re          
 import pandas as pd
-from plyer import notification
-import winsound
 import openpyxl
 import google.generativeai as genai
 import pandas as pd
+
+import sys
+
+# Solo importamos las herramientas de sonido y notificaciones si estamos en Windows
+if sys.platform == "win32":
+    import winsound
+    from plyer import notification
 
 # Importamos nuestros módulos locales
 import config
@@ -18,18 +23,18 @@ from motor_matematico import calcular_cu_ponderados
 # =====================================================================
 def notificar_error(archivo, motivo):
     """Lanza una notificación visual y sonora cuando un archivo falla por completo."""
-    try:
-        # Sonido crítico/error nativo de Windows
-        winsound.MessageBeep(winsound.MB_ICONHAND) 
-        notification.notify(
-            title="⚠️ Fallo IA - SSPP",
-            message=f"El archivo {archivo} falló:\n{motivo}",
-            app_name="Guardián SSPP",
-            timeout=7  
-        )
-    except:
-        pass
-
+    if sys.platform == "win32":
+        try:
+            # Sonido crítico/error nativo de Windows
+            winsound.MessageBeep(winsound.MB_ICONHAND) 
+            notification.notify(
+                title="⚠️ Fallo IA - SSPP",
+                message=f"El archivo {archivo} falló:\n{motivo}",
+                app_name="Guardián SSPP",
+                timeout=7  
+            )
+        except:
+            pass
 def procesar_y_guardar_factura_vision(ruta_pdf, archivo, nombre_edificio):
     # --- FILTRO DE MEMORIA INMEDIATA ---
     if archivo in config.archivos_procesados_memoria:
