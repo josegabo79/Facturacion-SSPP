@@ -8,7 +8,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 archivos_procesados_memoria = set()
 
 # --- RUTAS DE ARCHIVOS ---
-ruta_excel = "Datos_SSPP.xlsx"
+ruta_excel = "https://pactia-my.sharepoint.com/:x:/p/jblandon/IQBByiYCKLQpT4JUOqcorATHAS7CasuVrB70SFxOeH4amVc?download=1"
 
 carpetas_edificios = {
     "Buró 51": r"C:\Users\JoseGabrielBlandonHe\OneDrive - Pactia\01 JEFATURA PY\2. Energia\Proyecto SSPP\Facturas\Buro 51",
