@@ -6,7 +6,7 @@ import streamlit as st
 # --- CONEXIÓN SEGURA EN LA NUBE PARA GEMINI ---
 try:
     # El código va a la caja fuerte de Streamlit y saca la llave llamada "GEMINI_API_KEY"
-    llave_secreta = st.secrets["AIzaSyA0ennLkvdpGXS0ZC7gQIWR_WIG2ZdKVRc"]
+    llave_secreta = st.secrets["GEMINI_API_KEY"]
     cliente = genai.Client(api_key=llave_secreta)
 except Exception as e:
     st.error("⚠️ Error de seguridad: No se encontró la llave de Gemini en los Secretos.")
