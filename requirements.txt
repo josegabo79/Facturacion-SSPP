@@ -2,7 +2,10 @@ streamlit
 pandas
 openpyxl
 pdfplumber
-google-genai
+google-generativeai
 watchdog
 plyer
 python-dotenv
+gspread
+oauth2client
+plotly
