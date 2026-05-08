@@ -51,7 +51,7 @@ def consultar_chatbot(pregunta, dataframe):
     for intento in range(max_reintentos):
         try:
             respuesta = cliente_ia.models.generate_content(
-                model='gemini-2.0-flash', 
+                model='gemini-flash-latest', 
                 contents=prompt_analisis
             )
             return respuesta.text
