@@ -59,7 +59,7 @@ st.markdown(estilos_sidebar, unsafe_allow_html=True)
 #---------------------------------------------------------------------
 
 # --- Función: NUEVA CONEXIÓN SEGURA A GOOGLE SHEETS DESDE LA NUBE ---
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=3600)
 def cargar_datos():
     try:
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -68,20 +68,29 @@ def cargar_datos():
         cliente_sheets = gspread.authorize(creds)
         
         hoja = cliente_sheets.open("Datos_SSPP").sheet1
-        datos = hoja.get_all_records()
+        
+        # EL TRUCO ESTÁ AQUÍ: UNFORMATTED_VALUE trae el número puro en lugar del formato de texto
+        datos = hoja.get_all_records(value_render_option='UNFORMATTED_VALUE')
         df = pd.DataFrame(datos)
         
-        # --- ELIMINAR DATOS FANTASMA ---
-        # Convertimos los espacios en blanco de Sheets a nulos reales de Pandas
+        # --- LIMPIEZA DE FILAS FANTASMAS ---
         df.replace("", pd.NA, inplace=True) 
-        # Eliminamos cualquier fila o columna que esté completamente vacía
         df.dropna(how="all", inplace=True) 
         df.dropna(axis=1, how="all", inplace=True)
         
+        # --- REDUNDANCIA DE COMAS A PUNTOS ---
+        # Si quedó algún texto colado, lo convertimos forzosamente a decimal exacto
+        for col in df.columns:
+            if df[col].dtype == object:
+                try:
+                    df[col] = df[col].astype(str).str.replace(',', '.').astype(float)
+                except ValueError:
+                    pass # Si no es un número (ej. "Buró 51"), se queda como texto
+                    
         return df
         
     except Exception as e:
-        st.error(f"⚠️ Error al conectar con la base de datos en la nube: {e}")
+        st.error(f"⚠️ Error al conectar con Google Sheets: {e}")
         return pd.DataFrame()
 
 # --- FUNCIÓN MAESTRA DE GRÁFICAS ÚNICA Y CORREGIDA ---
