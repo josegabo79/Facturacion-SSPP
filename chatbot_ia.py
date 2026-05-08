@@ -3,19 +3,19 @@ from google import genai
 import config
 import streamlit as st
 
-# --- CONEXIÓN SEGURA EN LA NUBE PARA GEMINI ---
+# --- CONEXIÓN SEGURA EN LA NUBE PARA GEMINI ---  
 try:
     # El código va a la caja fuerte de Streamlit y saca la llave llamada "GEMINI_API_KEY"
     llave_secreta = st.secrets["GEMINI_API_KEY"]
-    cliente = genai.Client(api_key=llave_secreta)
+    cliente_ia = genai.Client(api_key=llave_secreta)
 except Exception as e:
-    st.error("⚠️ Error de seguridad: No se encontró la llave de Gemini en los Secretos.")
+    st.error("⚠️ Error de seguridad: No se encontró la llave de Gemini en los Secretos.") 
 
 def consultar_chatbot(pregunta, dataframe):
     # Convertimos las últimas filas del Excel a texto para darle contexto a la IA
     # Solo enviamos lo necesario para no saturar el prompt
-    
-    datos_completos = dataframe.to_string(index=False)
+
+    datos_completos = dataframe.to_csv(index=False)
     
     prompt_analisis = f"""
     Eres el Analista Senior de Energía de Pactia. 
@@ -26,11 +26,11 @@ def consultar_chatbot(pregunta, dataframe):
     Pregunta del usuario: {pregunta}
     
     Instrucciones:
-    - Responde de forma clara, técnica y resumina. 
+    - Responde de forma clara técnica y no muy extensa. 
     - Si detectas valores de Energía Reactiva altos (mayores de $500.000) o penalidades, resáltalos.
     - Si comparas sedes, menciona el nombre de la sede exacto.
     - Nota: Los nombres de los edificios pueden estar escritos con o sin tildes (ej. Buro 51 o Buró 51). Trátalos como si fueran el mismo.
-    - La respuesta debe ser corta y concreta
+    - La respuesta debe ser concreta
 
     REGLAS ESTRICTAS PARA GENERAR GRÁFICAS:
     SIEMPRE debes incluir DOS bloques al final de tu respuesta EXACTAMENTE con esta estructura (no uses bloques de código markdown, solo texto plano):
@@ -54,10 +54,12 @@ def consultar_chatbot(pregunta, dataframe):
     
     """    
     # Llamar a Gemini usando el "cliente" que creamos arriba
-    respuesta = cliente.models.generate_content(
+    
+    respuesta = cliente_ia.models.generate_content(
         # Usamos el nombre correcto del modelo para la nueva API
         model='gemini-flash-latest',
         contents=prompt_analisis
     )
     
     return respuesta.text
+
