@@ -1,6 +1,5 @@
 import pandas as pd
 from google import genai
-import config
 import streamlit as st
 import time
 
