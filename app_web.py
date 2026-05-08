@@ -2,15 +2,90 @@ import streamlit as st
 import pandas as pd
 import io
 import base64
-import streamlit.components.v1 as components
 import plotly.express as px
 import random
 from chatbot_ia import consultar_chatbot
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
-# Función para gráficar:
+# 1. CONFIGURACIÓN DE PÁGINA Y DISEÑO (CSS)
+st.set_page_config(page_title="Analista SSPP", page_icon="⚡", layout="wide")
 
+# Solo dejamos la ruta del logo (Eliminamos RUTA_EXCEL porque ya usamos la nube)
+RUTA_LOGO = r"C:\Users\JoseGabrielBlandonHe\OneDrive - Pactia\01 JEFATURA PY\2. Energia\Proyecto SSPP\Diseños\New Logo PACTIA.png"
+
+#Estilos 
+st.markdown("""
+    <style>
+        html, body, [class*="css"]  {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+        .stSubheader {
+            color: #374151;
+            font-weight: 600 !important;
+            border-bottom: 2px solid #E5E7EB;
+            padding-bottom: 10px;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+estilos_sidebar = """
+<style>
+    /* Transforma los botones de radio en cajas redondeadas de IGUAL ANCHO */
+    [data-testid="stSidebar"] div[role="radiogroup"] > label {
+        background-color: #FFFFFF;
+        border: 1.5px solid #E5E7EB;
+        border-radius: 12px;
+        padding: 12px 15px;
+        margin-bottom: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+        transition: all 0.3s ease;
+        cursor: pointer;
+        width: 100%; /* Fuerza a que ocupen todo el ancho disponible */
+        display: flex; /* Mantiene el texto y el círculo bien alineados */
+        box-sizing: border-box; /* Evita que el borde rompa el tamaño */
+    }
+    
+    /* Efecto al pasar el mouse (hover) */
+    [data-testid="stSidebar"] div[role="radiogroup"] > label:hover {
+        border-color: #1E3A8A;
+        background-color: #F8FAFC;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        transform: translateY(-1px);
+    }
+</style>
+"""
+st.markdown(estilos_sidebar, unsafe_allow_html=True)
+#---------------------------------------------------------------------
+
+# --- Función: NUEVA CONEXIÓN SEGURA A GOOGLE SHEETS DESDE LA NUBE ---
+@st.cache_data(ttl=600)
+def cargar_datos():
+    try:
+        scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+        credenciales_dict = st.secrets["gcp_service_account"]
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(credenciales_dict, scope)
+        cliente_sheets = gspread.authorize(creds)
+        
+        hoja = cliente_sheets.open("Datos_SSPP").sheet1
+        datos = hoja.get_all_records()
+        df = pd.DataFrame(datos)
+        
+        # --- ELIMINAR DATOS FANTASMA ---
+        # Convertimos los espacios en blanco de Sheets a nulos reales de Pandas
+        df.replace("", pd.NA, inplace=True) 
+        # Eliminamos cualquier fila o columna que esté completamente vacía
+        df.dropna(how="all", inplace=True) 
+        df.dropna(axis=1, how="all", inplace=True)
+        
+        return df
+        
+    except Exception as e:
+        st.error(f"⚠️ Error al conectar con la base de datos en la nube: {e}")
+        return pd.DataFrame()
+
+# --- FUNCIÓN MAESTRA DE GRÁFICAS ÚNICA Y CORREGIDA ---
 def mostrar_mensaje_con_graficas(contenido):
-    # Variables iniciales
     texto_principal = contenido
     datos_barra = None
     datos_torta = None
@@ -31,23 +106,19 @@ def mostrar_mensaje_con_graficas(contenido):
     # 2. Mostramos el texto hablado de la IA
     st.markdown(texto_principal)
 
-    # 3. Dibujar las gráficas
+    # 3. Dibujar las gráficas si la IA mandó datos
     if datos_barra or datos_torta:
         st.markdown("<br>", unsafe_allow_html=True)
         st.divider()       
                 
-        tonos_estilo = [ # 1. Defines tus tonos específicos (Ejemplo: Gama de azules corporativos y grises)   
-            '#1C588C', # Tu azul principal
-            '#2B678C', '#609BBF', '#84C1D9', '#99B8BF', '#94A3B8', 
-            '#8CBEB2', '#F2EBBF', '#F3B562', '#89D99D' 
+        tonos_estilo = [ 
+            '#1C588C', '#2B678C', '#609BBF', '#84C1D9', '#99B8BF', 
+            '#94A3B8', '#8CBEB2', '#F2EBBF', '#F3B562', '#89D99D' 
         ]
         
-        # 2. Haces que se mezclen aleatoriamente en cada consulta. Así siempre usará tus colores, pero en distinto orden        
         colores_barras = random.sample(tonos_estilo, len(tonos_estilo))
-        colores_torta = random.sample(tonos_estilo, len(tonos_estilo))
-        # ---------------------------------
-
-        col_barra, col_espacio, col_torta = st.columns([2.5, 0.3, 1.2]) # Espacios entre gráficas [2.5 (Barras), 0.3 (Espacio vacío), 1.2 (Torta)]
+        
+        col_barra, col_espacio, col_torta = st.columns([2.5, 0.3, 1.2]) 
 
         # --- GRAFICAR BARRAS ---
         if datos_barra:
@@ -59,21 +130,16 @@ def mostrar_mensaje_con_graficas(contenido):
                         ejes_y = list(df_bar.columns[1:]) 
 
                         fig_bar = px.bar(df_bar, x=eje_x, y=ejes_y, barmode='group',
-                                       title="Evolución Histórica", labels={"variable": "Edificio ", "value": "Total " }, color_discrete_sequence=colores_barras)
+                                       title="Evolución Histórica", labels={"variable": "Edificio ", "value": "Total " }, 
+                                       color_discrete_sequence=colores_barras)
                         
                         fig_bar.update_layout(
-                            height=450, # Le damos un poco más de altura para que quepa la leyenda
+                            height=450, 
                             xaxis_title=eje_x.capitalize(), 
                             yaxis_title="Valor",
-                            legend_title_text='', # Quitamos el título de la leyenda para mayor limpieza
-                            legend=dict(
-                                orientation="h", # Horizontal
-                                yanchor="top",
-                                y=-0.25, # La empujamos hacia abajo
-                                xanchor="center",
-                                x=0.5
-                            ),
-                            margin=dict(b=80) # Margen inferior extra para que no se corte el texto
+                            legend_title_text='', 
+                            legend=dict(orientation="h", yanchor="top", y=-0.25, xanchor="center", x=0.5),
+                            margin=dict(b=80) 
                         )
                         st.plotly_chart(fig_bar, use_container_width=True)
                 except Exception as e:
@@ -87,19 +153,12 @@ def mostrar_mensaje_con_graficas(contenido):
                     if not df_pie.empty:
                         fig_pie = px.pie(df_pie, names=df_pie.columns[0], values=df_pie.columns[1],
                                        title="Distribución componentes CU", hole=0.4,
-                                       labels={"Categoría": "Componente ", "value": "Total " },
                                        color_discrete_sequence=px.colors.qualitative.Pastel)
                         
                         fig_pie.update_layout(
-                            height=450, 
+                            height=450, # AQUÍ ESTABA EL ERROR DE LOS 3500px EN LA VERSIÓN VIEJA
                             showlegend=True,
-                            legend=dict(
-                                orientation="h",
-                                yanchor="top",
-                                y=-0.25,
-                                xanchor="center",
-                                x=0.5
-                            ),
+                            legend=dict(orientation="h", yanchor="top", y=-0.25, xanchor="center", x=0.5),
                             margin=dict(b=80)
                         )
                         fig_pie.update_traces(textinfo='percent')
@@ -107,47 +166,15 @@ def mostrar_mensaje_con_graficas(contenido):
                 except Exception as e:
                     st.error(f"⚠️ Error renderizando torta: {e}")
 
-# -----------------------------------
-
-# Sugerencias adaptadas al Proyecto Facturación SSPP (¡Mucho más útiles para tu equipo!)
+# --- SUGERENCIAS ---
 SUGGESTIONS = {
-    "💡 Consumo Total": (
-        "Resume el consumo total de energía del último mes facturado sumando todos los edificios y compáralo con dos periodos anteriores."
-    ),
-    "📊 Graficar Costo Unitario": (
-        "Genera una gráfica comparando el Costo Unitario (CU) de los diferentes edificios este mes."
-    ),
-    "🏢 Edificio con mayor cobro": (
-        "¿Cuál fue el edificio o contrato que presentó el mayor valor a pagar en la última facturación? y compáralo con dos periodos anteriores"
-    ),
-    "⚠️ Detectar anomalías": (
-        "Analiza los datos y dime si existe algún cobro atípico o anomalía en los componentes (Generación, Comercialización, etc)."
-    ),
+    "🔌 Consumo Total": "Resume el consumo total de energía del último mes facturado sumando todos los edificios y compáralo con dos periodos anteriores.",
+    "📊 Graficar Costo Unitario": "Genera una gráfica comparando el Costo Unitario (CU) de los diferentes edificios este mes.",
+    "🏢 Edificio con mayor cobro": "¿Cuál fue el edificio o contrato que presentó el mayor valor a pagar en la última facturación? y compáralo con dos periodos anteriores",
+    "⚠️ Detectar anomalías": "Analiza los datos y dime si existe algún cobro atípico o anomalía en los componentes (Generación, Comercialización, etc)."
 }
 
-# 1. CONFIGURACIÓN DE PÁGINA Y DISEÑO (CSS)
-st.set_page_config(page_title="Analista SSPP", page_icon="⚡", layout="wide")
-
-# Rutas de tus archivos locales
-RUTA_EXCEL = r"C:\Users\JoseGabrielBlandonHe\OneDrive - Pactia\01 JEFATURA PY\2. Energia\Proyecto SSPP\Datos_SSPP.xlsx"
-RUTA_LOGO = r"C:\Users\JoseGabrielBlandonHe\OneDrive - Pactia\01 JEFATURA PY\2. Energia\Proyecto SSPP\Diseños\New Logo PACTIA.png"
-
-# Inyectamos diseño corporativo para la tipografía general
-st.markdown("""
-    <style>
-        html, body, [class*="css"]  {
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-        }
-        .stSubheader {
-            color: #374151;
-            font-weight: 600 !important;
-            border-bottom: 2px solid #E5E7EB;
-            padding-bottom: 10px;
-        }
-    </style>
-    """, unsafe_allow_html=True)
-
-# 2. EL BANNER SUPERIOR
+# --- BANNER SUPERIOR ---
 def get_base64_image(image_path):
     try:
         with open(image_path, "rb") as img_file:
@@ -166,13 +193,17 @@ banner_html = f"""
 """
 st.markdown(banner_html, unsafe_allow_html=True)
 
-# 3. CREACIÓN DE PESTAÑAS
-tab_dashboard, tab_chat = st.tabs(["📈 Dashboard de Consumos", "🖥️ Analista Virtual"])
+# 1. Creamos el menú en la barra lateral
+st.sidebar.markdown("<div style='height: 200px;'></div>", unsafe_allow_html=True) #Saltos de línea
+st.sidebar.title("Navegación") 
+opcion_elegida = st.sidebar.radio("Ir a:", ["📈 Dashboard Energía", "💡Asistente IA"])
 
 # --- PESTAÑA 1: DASHBOARD ---
-with tab_dashboard:
+if opcion_elegida == "📈 Dashboard Energía":
+    st.sidebar.markdown("<br><br><br>", unsafe_allow_html=True)
+    st.title("Dashboard de Energía")
     st.markdown("<br>", unsafe_allow_html=True)
-    st.subheader("Tablero Interactivo de Energía")
+    #st.subheader("Tablero Interactivo de Energía")
     
     ENLACE_POWER_BI = "https://app.powerbi.com/reportEmbed?reportId=e58f7b05-80a4-4875-a0d8-fcbfb11d47ed&autoAuth=true&ctid=6503c5d1-70bc-437f-a0b6-a7849af8c68c&navContentPaneEnabled=false"
     
@@ -185,16 +216,15 @@ with tab_dashboard:
     """    
     st.markdown(iframe_responsivo, unsafe_allow_html=True)
 
-# --- PESTAÑA 2: CHATBOT (Versión Limpia sin Historial) ---
-with tab_chat:
+# --- PESTAÑA 2: CHATBOT ---
+elif opcion_elegida == "💡Asistente IA":
+    st.title("Asistente de Inteligencia Artificial")
     col_vacia_izq, col_central, col_vacia_der = st.columns([1, 4, 1])
 
     with col_central:
         st.markdown("<br>", unsafe_allow_html=True)
         st.subheader("Analista Virtual SSPP")
         
-        # 1. Lógica de Sugerencias (Pills)
-        # Usamos una clave única para que Streamlit detecte el cambio
         seleccion_pill = st.pills(
             "Sugerencias de análisis:", 
             options=list(SUGGESTIONS.keys()), 
@@ -202,72 +232,31 @@ with tab_chat:
             key="pills_input"
         )
 
-        # Determinar el prompt final (o de la caja de texto o de la sugerencia)
         prompt_usuario = st.chat_input("Escribe tu duda sobre las facturas...")
         
-        # Si se selecciona una sugerencia, esa es nuestra pregunta
-        if seleccion_pill:
-            prompt_final = SUGGESTIONS[seleccion_pill]
-        else:
+        # Determina qué preguntar basándose en si hizo clic o si escribió
+        prompt_final = None
+        if prompt_usuario:
             prompt_final = prompt_usuario
+        elif seleccion_pill:
+            prompt_final = SUGGESTIONS[seleccion_pill]
 
-        # 2. PROCESAMIENTO Y RENDERIZADO ÚNICO
         if prompt_final:
-            # Mostramos la pregunta actual
             with st.chat_message("user"):
                 st.markdown(prompt_final)
 
-            # Generamos la respuesta
             with st.chat_message("assistant"):
                 with st.spinner("Analizando datos y generando gráficas..."):
                     try:
-                        # Cargamos el DF si no está cargado
-                        df = pd.read_excel(RUTA_EXCEL)
-                        # Llamada a tu función de IA
-                        respuesta_ia = consultar_chatbot(prompt_final, df)
+                        df = cargar_datos() 
                         
-                        # Mostramos el resultado con la función maestra
-                        mostrar_mensaje_con_graficas(respuesta_ia)
+                        if not df.empty:
+                            respuesta_ia = consultar_chatbot(prompt_final, df)
+                            mostrar_mensaje_con_graficas(respuesta_ia)
+                        else:
+                            st.warning("⚠️ No se pudieron obtener datos de Google Sheets.")
+                            
                     except Exception as e:
-                        st.error(f"Error al conectar con la base de datos: {e}")
-
+                        st.error(f"Error al procesar la consulta: {e}")
         else:
-            # Si no hay pregunta, mostramos un mensaje de bienvenida sutil
             st.info("👋 Bienvenido. Selecciona una sugerencia arriba o escribe tu consulta para analizar los datos de facturación.")
-
-# --- AJUSTE EN LA FUNCIÓN MAESTRA PARA COMPONENTES ---
-def mostrar_mensaje_con_graficas(contenido):
-    if "---GRAFICA---" in contenido:
-        partes = contenido.split("---GRAFICA---")
-        st.markdown(partes[0]) 
-        
-        try:
-            df_plot = pd.read_csv(io.StringIO(partes[1].strip()), sep=",|;", engine="python")
-            
-            if not df_plot.empty:
-                st.markdown("<br>", unsafe_allow_html=True)
-                st.divider()
-                
-                col_barra, col_torta = st.columns([2, 1])
-                
-                with col_barra:
-                    # Barras para tendencia o comparación
-                    fig_bar = px.bar(df_plot, x=df_plot.columns[0], y=df_plot.columns[1],
-                                   title="Análisis de Valores",
-                                   color_discrete_sequence=['#00529B'], text_auto='.2f')
-                    fig_bar.update_layout(height=400)
-                    st.plotly_chart(fig_bar, use_container_width=True)
-
-                with col_torta:
-                    # Torta para distribución (Componentes CU)
-                    # Forzamos a que use la primera columna como etiquetas de componentes
-                    fig_pie = px.pie(df_plot, names=df_plot.columns[0], values=df_plot.columns[1],
-                                   title="Distribución de Costos", hole=0.4,
-                                   color_discrete_sequence=px.colors.qualitative.Pastel)
-                    fig_pie.update_layout(height=3500, showlegend=True) # Activamos leyenda para ver nombres de componentes
-                    fig_pie.update_traces(textinfo='percent')
-                    st.plotly_chart(fig_pie, use_container_width=True)
-        except Exception as e:
-            st.error(f"⚠️ Los datos de la gráfica no tienen el formato correcto.")
-    else:
-        st.markdown(contenido)
