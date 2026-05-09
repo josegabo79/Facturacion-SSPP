@@ -12,7 +12,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 st.set_page_config(page_title="Analista SSPP", page_icon="⚡", layout="wide")
 
 # Solo dejamos la ruta del logo (Eliminamos RUTA_EXCEL porque ya usamos la nube)
-RUTA_LOGO = "New Logo PACTIA.png"
+RUTA_LOGO = r"C:\Users\JoseGabrielBlandonHe\OneDrive - Pactia\01 JEFATURA PY\2. Energia\Proyecto SSPP\Diseños\New Logo PACTIA.png"
 
 #Estilos 
 st.markdown("""
@@ -69,7 +69,7 @@ def cargar_datos():
         
         hoja = cliente_sheets.open("Datos_SSPP").sheet1
         
-        # EL TRUCO ESTÁ AQUÍ: UNFORMATTED_VALUE trae el número puro en lugar del formato de texto
+        # Traemos los valores sin formato para que Google envíe números puros cuando pueda
         datos = hoja.get_all_records(value_render_option='UNFORMATTED_VALUE')
         df = pd.DataFrame(datos)
         
@@ -77,16 +77,24 @@ def cargar_datos():
         df.replace("", pd.NA, inplace=True) 
         df.dropna(how="all", inplace=True) 
         df.dropna(axis=1, how="all", inplace=True)
+        # Llenamos los vacíos con texto en blanco para no enviarle errores a la IA
+        df.fillna("", inplace=True) 
         
-        # --- REDUNDANCIA DE COMAS A PUNTOS ---
-        # Si quedó algún texto colado, lo convertimos forzosamente a decimal exacto
-        for col in df.columns:
-            if df[col].dtype == object:
+        # --- LIMPIEZA INTELIGENTE DE NÚMEROS COLOMBIANOS ---
+        def limpiar_numero(x):
+            if isinstance(x, str):
+                # Quitamos puntos (miles) y cambiamos comas por puntos (decimales)
+                x_limpio = x.replace('.', '').replace(',', '.')
                 try:
-                    df[col] = df[col].astype(str).str.replace(',', '.').astype(float)
+                    return float(x_limpio)
                 except ValueError:
-                    pass # Si no es un número (ej. "Buró 51"), se queda como texto
-                    
+                    return x # Si es texto real (ej. "Buró 51"), se queda igual
+            return x # Si ya era un número puro desde Google, no lo tocamos
+
+        # Aplicamos la limpieza a todas las columnas
+        for col in df.columns:
+            df[col] = df[col].apply(limpiar_numero)
+            
         return df
         
     except Exception as e:
@@ -134,6 +142,7 @@ def mostrar_mensaje_con_graficas(contenido):
             with col_barra:
                 try:
                     df_bar = pd.read_csv(io.StringIO(datos_barra), sep=",")
+
                     if not df_bar.empty:
                         eje_x = df_bar.columns[0]
                         ejes_y = list(df_bar.columns[1:]) 

@@ -56,7 +56,7 @@ def consultar_chatbot(pregunta, dataframe):
     - Usa negritas (**) solo para resaltar palabras clave completas, asegurándote de dejar espacios alrededor de los asteriscos. No pegues asteriscos a números o símbolos especiales.
     - REGLA CRÍTICA PARA LAS GRÁFICAS:  
     - NO agregues símbolos de moneda como $
-        
+       
     """    
     
     # --- SISTEMA ANTICAÍDAS Y TOLERANCIA AL TRÁFICO (REINTENTOS AUTOMÁTICOS) ---
