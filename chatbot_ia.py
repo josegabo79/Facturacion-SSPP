@@ -54,8 +54,9 @@ def consultar_chatbot(pregunta, dataframe):
     - NUNCA uses formato matemático ni LaTeX. ESTÁ TOTALMENTE PROHIBIDO encerrar texto o números entre signos de dólar ($ ... $).
     - Si vas a mencionar un valor monetario, debes "escapar" el signo de dólar usando una barra invertida (ejemplo: \\$500.000) o usar la palabra "COP" (ejemplo: COP 500.000).
     - Usa negritas (**) solo para resaltar palabras clave completas, asegurándote de dejar espacios alrededor de los asteriscos. No pegues asteriscos a números o símbolos especiales.
-    - REGLA CRÍTICA PARA EL CSV DE LAS GRÁFICAS: Los valores numéricos dentro del CSV NO deben tener ningún separador de miles. Usa EXCLUSIVAMENTE el punto (.) como separador de decimales. Las comas (,) SOLO se pueden usar para separar las columnas.
-       
+    - REGLA CRÍTICA PARA LAS GRÁFICAS:  
+    - NO agregues símbolos de moneda como $
+        
     """    
     
     # --- SISTEMA ANTICAÍDAS Y TOLERANCIA AL TRÁFICO (REINTENTOS AUTOMÁTICOS) ---
