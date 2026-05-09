@@ -15,11 +15,22 @@ except Exception as e:
 def consultar_chatbot(pregunta, dataframe):
     if not cliente_ia:
         return "⚠️ Error: Cliente de IA no configurado."
-
-    # Convertimos a CSV exacto para no saturar a la IA ni demorarla con espacios
-    datos_completos = dataframe.to_csv(index=False)
     
-    # ESTE ES EXACTAMENTE TU PROMPT ORIGINAL, SIN MODIFICAR:
+    # 1. Definimos SOLO las columnas que la IA realmente necesita para analizar y graficar.
+    # (Ajusta estos nombres exactos según cómo se llamen en tu Google Sheets)
+    columnas_esenciales = [
+        "Comercializador", "Edificio", "Mes_pago", "Consumo_Total", "Total_Pagar", "Subtotal","Energia_reactiva", "CU_Total", 
+        "CU_Generacion", "CU_Comercializacion", "CU_Perdidas", 
+        "CU_Transporte_Nacional", "CU_Transporte_Regional", "CU_Distribucion", "CU_Restricciones",
+        "Cobros_Atipicos"
+    ]
+
+    # 2. Filtramos el dataframe para que cruce solo las columnas que existen
+    columnas_filtradas = [col for col in columnas_esenciales if col in dataframe.columns]
+    df_ligero = dataframe[columnas_filtradas]    
+    
+    datos_completos = df_ligero.to_csv(index=False) # Convertimos a CSV exacto para no saturar a la IA ni demorarla con espacios
+    
     prompt_analisis = f"""
     Eres el Analista Senior de Energía de Pactia. 
     Tu base de datos es la siguiente tabla de facturas procesadas en formato CSV:
@@ -28,44 +39,50 @@ def consultar_chatbot(pregunta, dataframe):
     
     Pregunta del usuario: {pregunta}
     
-    Instrucciones:
-    - Responde de forma clara técnica y no muy extensa. 
-    - La respuesta debe ser concreta
+    REGLAS DE FORMATO Y REDACCIÓN (MUY IMPORTANTE):
+    - Responde de forma clara, técnica y no muy extensa. 
     - Si detectas valores de Energía Reactiva altos (mayores de 500.000) o penalidades, resáltalos.
     - Si comparas sedes, menciona el nombre de la sede exacto.
     - Nota: Los nombres de los edificios pueden variar la forma de escribirlos. Si la tabla de tu respuesta tiene 6 edificios, el CSV debe tener las 6 columnas de esos edificios.
-
-    REGLAS ESTRICTAS PARA GENERAR GRÁFICAS:
-    SIEMPRE debes incluir DOS bloques al final de tu respuesta EXACTAMENTE con esta estructura:
-
-    1. DEBES escribir la etiqueta ---GRAFICA_BARRA--- seguida de un salto de línea y un CSV para evolución en el tiempo:
+    
+    - NUNCA uses formato matemático ni LaTeX. ESTÁ TOTALMENTE PROHIBIDO encerrar texto o números entre signos de dólar ($ ... $).
+    - Si vas a mencionar un valor monetario, debes "escapar" el signo de dólar usando una barra invertida (ejemplo: \\$500.000) o usar la palabra "COP" (ejemplo: COP 500.000).
+    - Usa negritas (**) solo para resaltar palabras clave completas, asegurándote de dejar espacios alrededor de los asteriscos. No pegues asteriscos a números o símbolos especiales.
+    - Los valores numéricos deben ser números puros (Float/Int), NO textos entre comillas.
+    
+    Instrucciones finales:
+    - Al final de tu respuesta, incluye SIEMPRE los datos para las gráficas en un bloque de código JSON con esta estructura exacta:
+    Grafico Barra:
     - La Columna 1 SIEMPRE debe ser "Mes" (columna Mes_pago) (orden cronológico).
     - Traer los datos de los meses que pida el usuario o si no pide nada traer 4 ulimos meses.  
     - MODO SERIES (Comparativa total): Si piden comparar o ver todos los edificios, usa múltiples columnas incluyendo TODOS los edificios. 
     - Traer los datos que pida el usuario para El Valor en las series: consumo (columna Consumo_Total), costo (valor) (Columna "Subtotal") o CU (Columna CU_Total). Si no pide consumo o CU, traer datos del costo.
-    - REGLA CRÍTICA: PROHIBIDO RESUMIR. NO uses "etc". El CSV debe contener las columnas de TODOS los edificios sin omitir ninguno. Si la tabla de tu respuesta tiene 6 edificios, el CSV debe tener las 6 columnas de esos edificios.
-
-    2. DEBES escribir la etiqueta ---GRAFICA_TORTA--- seguida de un salto de línea y un CSV
-    Categoria,Valor
+    - REGLA CRÍTICA: PROHIBIDO RESUMIR. NO uses "etc". El JSON debe contener las columnas de TODOS los edificios sin omitir ninguno. Si la tabla de tu respuesta tiene 6 edificios, el JSON debe tener las 6 columnas de esos edificios.
+    Gráfico torta:
     Pon el promedio de los 6 componentes exactos: Generación (CU_Generación), Transmisión (Cu_Transmisión), Distribución (CU_Transporte_Nacional + CU_Transporte_Regional), Comercialización (CU_Comercializacion), Restricciones (CU_Restricciones), Pérdidas (CU_Perdidas). 
     Si preguntan por un solo edificio y no tiene componentes poner el valor de Costo Unitario (CU_Total)  y no poner columnas de componentes
-
-    REGLAS DE FORMATO Y REDACCIÓN (MUY IMPORTANTE):
-    - NUNCA uses formato matemático ni LaTeX. ESTÁ TOTALMENTE PROHIBIDO encerrar texto o números entre signos de dólar ($ ... $).
-    - Si vas a mencionar un valor monetario, debes "escapar" el signo de dólar usando una barra invertida (ejemplo: \\$500.000) o usar la palabra "COP" (ejemplo: COP 500.000).
-    - Usa negritas (**) solo para resaltar palabras clave completas, asegurándote de dejar espacios alrededor de los asteriscos. No pegues asteriscos a números o símbolos especiales.
-    - REGLA CRÍTICA PARA LAS GRÁFICAS:  
-    - NO agregues símbolos de moneda como $
-       
-    """    
     
+    ```json
+    {{
+      "grafica_barra": [
+        {{"Mes": "Enero", "Buró 51": 15000.50, "Buró 4.0": 20000.00}},
+        {{"Mes": "Febrero", "Buró 51": 18000.00, "Buró 4.0": 22000.00}}
+      ],
+      "grafica_torta": [
+        {{"Categoria": "Generación", "Value": 2681585.00}},
+        {{"Categoria": "Distribución", "Value": 445835.00}}
+      ]
+    }}
+    ```       
+    """    
+
     # --- SISTEMA ANTICAÍDAS Y TOLERANCIA AL TRÁFICO (REINTENTOS AUTOMÁTICOS) ---
     max_reintentos = 3 
     
     for intento in range(max_reintentos):
         try:
             respuesta = cliente_ia.models.generate_content(
-                model='gemini-flash-latest', 
+                model='gemini-2.5-flash-lite', 
                 contents=prompt_analisis
             )
             return respuesta.text
@@ -80,3 +97,20 @@ def consultar_chatbot(pregunta, dataframe):
             
             # Si definitivamente falló tras 3 intentos, devuelve error amigable
             return "⚠️ Los servidores de IA están demasiado saturados analizando la base de datos en este momento. Por favor, intenta de nuevo en unos segundos."
+        
+        
+""" REGLAS ESTRICTAS PARA GENERAR GRÁFICAS:
+    SIEMPRE debes incluir DOS bloques al final de tu respuesta EXACTAMENTE con esta estructura:
+
+    1. DEBES escribir la etiqueta ---GRAFICA_BARRA--- seguida de un salto de línea y un JSON estructurado dentro de un bloque de código. No uses etiquetas antiguas de CSV evolución en el tiempo:
+    - La Columna 1 SIEMPRE debe ser "Mes" (columna Mes_pago) (orden cronológico).
+    - Traer los datos de los meses que pida el usuario o si no pide nada traer 4 ulimos meses.  
+    - MODO SERIES (Comparativa total): Si piden comparar o ver todos los edificios, usa múltiples columnas incluyendo TODOS los edificios. 
+    - Traer los datos que pida el usuario para El Valor en las series: consumo (columna Consumo_Total), costo (valor) (Columna "Subtotal") o CU (Columna CU_Total). Si no pide consumo o CU, traer datos del costo.
+    - REGLA CRÍTICA: PROHIBIDO RESUMIR. NO uses "etc". El JSON debe contener las columnas de TODOS los edificios sin omitir ninguno. Si la tabla de tu respuesta tiene 6 edificios, el JSON debe tener las 6 columnas de esos edificios.
+
+    2. DEBES escribir la etiqueta ---GRAFICA_TORTA--- seguida de un salto de línea y un JSON estructurado dentro de un bloque de código. No uses etiquetas antiguas de CSV evolución en el tiempo:
+    Categoria,Valor
+    Pon el promedio de los 6 componentes exactos: Generación (CU_Generación), Transmisión (Cu_Transmisión), Distribución (CU_Transporte_Nacional + CU_Transporte_Regional), Comercialización (CU_Comercializacion), Restricciones (CU_Restricciones), Pérdidas (CU_Perdidas). 
+    Si preguntan por un solo edificio y no tiene componentes poner el valor de Costo Unitario (CU_Total)  y no poner columnas de componentes
+     """

@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import json
 import io
 import base64
 import plotly.express as px
@@ -12,7 +13,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 st.set_page_config(page_title="Analista SSPP", page_icon="⚡", layout="wide")
 
 # Solo dejamos la ruta del logo (Eliminamos RUTA_EXCEL porque ya usamos la nube)
-RUTA_LOGO = "New Logo PACTIA.png"
+RUTA_LOGO = r"C:\Users\JoseGabrielBlandonHe\OneDrive - Pactia\01 JEFATURA PY\2. Energia\Proyecto SSPP\Diseños\New Logo PACTIA.png"
 
 #Estilos 
 st.markdown("""
@@ -20,11 +21,7 @@ st.markdown("""
         html, body, [class*="css"]  {
             font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
         }
-        .stSubheader {
-            color: #374151;
-            font-weight: 600 !important;
-            border-bottom: 2px solid #E5E7EB;
-            padding-bottom: 10px;
+        .stSubheader { color: #374151; font-weight: 500 !important; border-bottom: 2px solid #E5E7EB; padding-bottom: 10px;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -80,11 +77,10 @@ def cargar_datos():
         # Llenamos los vacíos con texto en blanco para no enviarle errores a la IA
         df.fillna("", inplace=True) 
         
-        # --- LIMPIEZA INTELIGENTE DE NÚMEROS COLOMBIANOS ---
+        # --- LIMPIEZA INTELIGENTE DE NÚMEROS ---
         def limpiar_numero(x):
             if isinstance(x, str):
-                # Quitamos puntos (miles) y cambiamos comas por puntos (decimales)
-                x_limpio = x.replace('.', '').replace(',', '.')
+                x_limpio = x.replace(',', '.') # Reemplaza punto por coma #.replace('.', '') Para quitar puntos
                 try:
                     return float(x_limpio)
                 except ValueError:
@@ -104,85 +100,79 @@ def cargar_datos():
 # --- FUNCIÓN MAESTRA DE GRÁFICAS ÚNICA Y CORREGIDA ---
 def mostrar_mensaje_con_graficas(contenido):
     texto_principal = contenido
-    datos_barra = None
-    datos_torta = None
+    datos_barra = []
+    datos_torta = []
 
-    # 1. Separación de los bloques exactos de la IA
-    if "---GRAFICA_BARRA---" in texto_principal:
-        partes = texto_principal.split("---GRAFICA_BARRA---")
-        texto_principal = partes[0]
-        resto = partes[1]
-        
-        if "---GRAFICA_TORTA---" in resto:
-            partes_resto = resto.split("---GRAFICA_TORTA---")
-            datos_barra = partes_resto[0].strip()
-            datos_torta = partes_resto[1].strip()
-        else:
-            datos_barra = resto.strip()
+    # 1. Extracción del bloque JSON
+    if "```json" in contenido:
+        try:
+            partes = contenido.split("```json")
+            texto_principal = partes[0].strip()
+            bloque_json = partes[1].split("```")[0].strip()
+            
+            diccionario_datos = json.loads(bloque_json)
+            datos_barra = diccionario_datos.get("grafica_barra", [])
+            datos_torta = diccionario_datos.get("grafica_torta", [])
+        except Exception:            
+            pass # Si falla el parseo, al menos mostramos el texto
 
-    # 2. Mostramos el texto hablado de la IA
+    # 2. Renderizado del Texto de la IA
     st.markdown(texto_principal)
 
-    # 3. Dibujar las gráficas si la IA mandó datos
+    # 3. Renderizado de Gráficas (Mismo diseño de columnas y estilos)
     if datos_barra or datos_torta:
         st.markdown("<br>", unsafe_allow_html=True)
         st.divider()       
                 
-        tonos_estilo = [ 
-            '#1C588C', '#2B678C', '#609BBF', '#84C1D9', '#99B8BF', 
-            '#94A3B8', '#8CBEB2', '#F2EBBF', '#F3B562', '#89D99D' 
-        ]
-        
+        # Tu paleta de colores original
+        tonos_estilo = ['#1C588C', '#2B678C', '#609BBF', '#84C1D9', '#99B8BF', '#94A3B8', '#8CBEB2', '#F2EBBF', '#F3B562', '#89D99D']
         colores_barras = random.sample(tonos_estilo, len(tonos_estilo))
         
+        # Mantenemos tus proporciones de columna exactas
         col_barra, col_espacio, col_torta = st.columns([2.5, 0.3, 1.2]) 
 
-        # --- GRAFICAR BARRAS ---
+        # --- GRÁFICA DE BARRAS ---
         if datos_barra:
             with col_barra:
                 try:
-                    df_bar = pd.read_csv(io.StringIO(datos_barra), sep=",")
+                    df_bar = pd.DataFrame(datos_barra)
+                    eje_x = df_bar.columns[0]
+                    ejes_y = list(df_bar.columns[1:]) 
 
-                    if not df_bar.empty:
-                        eje_x = df_bar.columns[0]
-                        ejes_y = list(df_bar.columns[1:]) 
+                    fig_bar = px.bar(df_bar, x=eje_x, y=ejes_y, barmode='group',
+                                   title="Evolución Histórica", 
+                                   labels={"variable": "Edificio", "value": "Total"},
+                                   color_discrete_sequence=colores_barras)
+                    
+                    fig_bar.update_layout(
+                        height=450, 
+                        legend=dict(orientation="h", yanchor="top", y=-0.25, xanchor="center", x=0.5),
+                        margin=dict(b=80)
+                    )
+                    st.plotly_chart(fig_bar, use_container_width=True)
+                except:
+                    st.error("Error en formato de barras")
 
-                        fig_bar = px.bar(df_bar, x=eje_x, y=ejes_y, barmode='group',
-                                       title="Evolución Histórica", labels={"variable": "Edificio ", "value": "Total " }, 
-                                       color_discrete_sequence=colores_barras)
-                        
-                        fig_bar.update_layout(
-                            height=450, 
-                            xaxis_title=eje_x.capitalize(), 
-                            yaxis_title="Valor",
-                            legend_title_text='', 
-                            legend=dict(orientation="h", yanchor="top", y=-0.25, xanchor="center", x=0.5),
-                            margin=dict(b=80) 
-                        )
-                        st.plotly_chart(fig_bar, use_container_width=True)
-                except Exception as e:
-                    st.error(f"⚠️ Error renderizando barras: {e}")
-
-        # --- GRAFICAR TORTA ---
+        # --- GRÁFICA DE TORTA ---
         if datos_torta:
             with col_torta:
                 try:
-                    df_pie = pd.read_csv(io.StringIO(datos_torta), sep=",")
-                    if not df_pie.empty:
-                        fig_pie = px.pie(df_pie, names=df_pie.columns[0], values=df_pie.columns[1],
-                                       title="Distribución componentes CU", hole=0.4,
-                                       color_discrete_sequence=px.colors.qualitative.Pastel)
-                        
-                        fig_pie.update_layout(
-                            height=450, # AQUÍ ESTABA EL ERROR DE LOS 3500px EN LA VERSIÓN VIEJA
-                            showlegend=True,
-                            legend=dict(orientation="h", yanchor="top", y=-0.25, xanchor="center", x=0.5),
-                            margin=dict(b=80)
-                        )
-                        fig_pie.update_traces(textinfo='percent')
-                        st.plotly_chart(fig_pie, use_container_width=True)
-                except Exception as e:
-                    st.error(f"⚠️ Error renderizando torta: {e}")
+                    df_pie = pd.DataFrame(datos_torta)
+                    # Tomamos la primera columna como nombres y la segunda como valores
+                    fig_pie = px.pie(df_pie, names=df_pie.columns[0], values=df_pie.columns[1],
+                                   title="Distribución componentes CU", hole=0.4,
+                                   color_discrete_sequence=px.colors.qualitative.Pastel)
+                    
+                    fig_pie.update_layout(
+                        height=450, 
+                        showlegend=True,
+                        legend=dict(orientation="h", yanchor="top", y=-0.25, xanchor="center", x=0.5),
+                        margin=dict(b=80)
+                    )
+                    fig_pie.update_traces(textinfo='percent')
+                    st.plotly_chart(fig_pie, use_container_width=True)
+                except:
+                    st.error("Error en formato de torta")
 
 # --- SUGERENCIAS ---
 SUGGESTIONS = {
