@@ -40,20 +40,21 @@ def consultar_chatbot(pregunta, dataframe):
     Pregunta del usuario: {pregunta}
     
     REGLAS DE FORMATO Y REDACCIÓN (MUY IMPORTANTE):
-    - Responde de forma clara, técnica y no muy extensa. 
-    - Si detectas valores de Energía Reactiva altos (mayores de 500.000) o penalidades, resáltalos.
+    - Responde de forma clara, técnica. No traer tablas, solo el analisis de texto.
+    - Si detectas valores de Energía Reactiva altos (mayores de 300.000) o penalidades, resáltalos.
     - Si comparas sedes, menciona el nombre de la sede exacto.
     - Nota: Los nombres de los edificios pueden variar la forma de escribirlos. Si la tabla de tu respuesta tiene 6 edificios, el CSV debe tener las 6 columnas de esos edificios.
     
     - NUNCA uses formato matemático ni LaTeX. ESTÁ TOTALMENTE PROHIBIDO encerrar texto o números entre signos de dólar ($ ... $).
     - Si vas a mencionar un valor monetario, debes "escapar" el signo de dólar usando una barra invertida (ejemplo: \\$500.000) o usar la palabra "COP" (ejemplo: COP 500.000).
     - Usa negritas (**) solo para resaltar palabras clave completas, asegurándote de dejar espacios alrededor de los asteriscos. No pegues asteriscos a números o símbolos especiales.
+    - REGLA PARA FECHAS Y MESES: En los datos JSON, NUNCA uses números opara representar los meses. Usa SIEMPRE el fornato mm/aa (mes/año) (Ejemplo: "01/26" o "Feb/26").
     - Los valores numéricos deben ser números puros (Float/Int), NO textos entre comillas.
     
     Instrucciones finales:
     - Al final de tu respuesta, incluye SIEMPRE los datos para las gráficas en un bloque de código JSON con esta estructura exacta:
     Grafico Barra:
-    - La Columna 1 SIEMPRE debe ser "Mes" (columna Mes_pago) (orden cronológico).
+    - La Columna 1 SIEMPRE debe ser "Mes" (columna Mes_pago) (orden cronológico).    
     - Traer los datos de los meses que pida el usuario o si no pide nada traer 4 ulimos meses.  
     - MODO SERIES (Comparativa total): Si piden comparar o ver todos los edificios, usa múltiples columnas incluyendo TODOS los edificios. 
     - Traer los datos que pida el usuario para El Valor en las series: consumo (columna Consumo_Total), costo (valor) (Columna "Subtotal") o CU (Columna CU_Total). Si no pide consumo o CU, traer datos del costo.
@@ -82,7 +83,7 @@ def consultar_chatbot(pregunta, dataframe):
     for intento in range(max_reintentos):
         try:
             respuesta = cliente_ia.models.generate_content(
-                model='gemini-2.5-flash-lite', 
+                model='gemini-3.1-flash-lite', 
                 contents=prompt_analisis
             )
             return respuesta.text

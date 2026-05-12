@@ -13,7 +13,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 st.set_page_config(page_title="Analista SSPP", page_icon="⚡", layout="wide")
 
 # Solo dejamos la ruta del logo (Eliminamos RUTA_EXCEL porque ya usamos la nube)
-RUTA_LOGO = "New Logo PACTIA.png"
+RUTA_LOGO = r"C:\Users\JoseGabrielBlandonHe\OneDrive - Pactia\01 JEFATURA PY\2. Energia\Proyecto SSPP\Diseños\New Logo PACTIA.png"
 
 #Estilos 
 st.markdown("""
@@ -23,6 +23,10 @@ st.markdown("""
         }
         .stSubheader { color: #374151; font-weight: 500 !important; border-bottom: 2px solid #E5E7EB; padding-bottom: 10px;
         }
+        /* 1. Aumenta el ancho de los mensajes de la IA y del usuario */
+        div[data-testid="stChatMessageContent"] { max-width: 1200px !important; }
+        /* 2. Aumenta el ancho de la caja flotante donde escribes */
+        div.stChatFloatingInputContainer { max-width: 1200px !important; }    
     </style>
     """, unsafe_allow_html=True)
 
@@ -90,7 +94,20 @@ def cargar_datos():
         # Aplicamos la limpieza a todas las columnas
         for col in df.columns:
             df[col] = df[col].apply(limpiar_numero)
-            
+
+        nombre_columna_fecha = 'Mes_pago'
+        if nombre_columna_fecha in df.columns:        
+            df[nombre_columna_fecha] = pd.to_datetime(          # 1. Convierte el número raro (45658) a una fecha real (ej. 2025-01-01)
+                df[nombre_columna_fecha], 
+                origin='1899-12-30', 
+                unit='D', 
+                errors='coerce' # Si hay celdas vacías, las ignora sin dar error
+            )    
+        # 2. Opcional pero Recomendado: Forzar a que de una vez quede como texto (Ej: "2025-01")
+        # Para que la IA ya reciba un texto claro y no se confunda
+        df[nombre_columna_fecha] = df[nombre_columna_fecha].dt.strftime('%Y-%m')
+
+
         return df
         
     except Exception as e:
@@ -143,6 +160,8 @@ def mostrar_mensaje_con_graficas(contenido):
                                    title="Evolución Histórica", 
                                    labels={"variable": "Edificio", "value": "Total"},
                                    color_discrete_sequence=colores_barras)
+                    fig_bar.update_layout(xaxis_type='category'  # Esto fuerza a Plotly a imprimir "Enero", "Febrero" y no números
+                        )
                     
                     fig_bar.update_layout(
                         height=450, 
@@ -163,11 +182,12 @@ def mostrar_mensaje_con_graficas(contenido):
                                    title="Distribución componentes CU", hole=0.4,
                                    color_discrete_sequence=px.colors.qualitative.Pastel)
                     
-                    fig_pie.update_layout(
-                        height=450, 
+                    fig_pie.update_layout( 
+                        # height=450, 
                         showlegend=True,
-                        legend=dict(orientation="h", yanchor="top", y=-0.25, xanchor="center", x=0.5),
-                        margin=dict(b=80)
+                        legend=dict(orientation="h", y=-0.2, xanchor="center", x=0.5),
+                        margin=dict(l=20, r=20, t=30, b=20),
+                        # margin=dict(b=80)
                     )
                     fig_pie.update_traces(textinfo='percent')
                     st.plotly_chart(fig_pie, use_container_width=True)
@@ -209,7 +229,7 @@ opcion_elegida = st.sidebar.radio("Ir a:", ["📈 Dashboard Energía", "💡Asis
 # --- PESTAÑA 1: DASHBOARD ---
 if opcion_elegida == "📈 Dashboard Energía":
     st.sidebar.markdown("<br><br><br>", unsafe_allow_html=True)
-    st.title("Dashboard de Energía")
+    st.markdown("<h3 style='text-align: left; font-size: 32px; color: #1C588C; font-weight: 600;'>Dashboard de Energía</h3>", unsafe_allow_html=True)    
     st.markdown("<br>", unsafe_allow_html=True)
     #st.subheader("Tablero Interactivo de Energía")
     
@@ -226,13 +246,12 @@ if opcion_elegida == "📈 Dashboard Energía":
 
 # --- PESTAÑA 2: CHATBOT ---
 elif opcion_elegida == "💡Asistente IA":
-    st.title("Asistente de Inteligencia Artificial")
+    st.markdown("<h3 style='text-align: left; font-size: 32px; color: #1C588C; font-weight: 600;'>Asistente de Inteligencia Artificial SSPP</h3>", unsafe_allow_html=True)
     col_vacia_izq, col_central, col_vacia_der = st.columns([1, 4, 1])
 
     with col_central:
         st.markdown("<br>", unsafe_allow_html=True)
-        st.subheader("Analista Virtual SSPP")
-        
+        #st.subheader("Analista Virtual SSPP")        
         seleccion_pill = st.pills(
             "Sugerencias de análisis:", 
             options=list(SUGGESTIONS.keys()), 
