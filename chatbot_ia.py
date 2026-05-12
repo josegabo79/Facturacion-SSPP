@@ -83,7 +83,7 @@ def consultar_chatbot(pregunta, dataframe):
     for intento in range(max_reintentos):
         try:
             respuesta = cliente_ia.models.generate_content(
-                model='gemini-2.5-flash-lite', 
+                model='gemini-3.1-flash-lite', 
                 contents=prompt_analisis
             )
             return respuesta.text
@@ -97,7 +97,7 @@ def consultar_chatbot(pregunta, dataframe):
                     continue       
             
             # Si definitivamente falló tras 3 intentos, devuelve error amigable
-            return "⚠️ Los servidores de IA están demasiado saturados analizando la base de datos en este momento. Por favor, intenta de nuevo en unos segundos."
+            return f"⚠️ Los servidores de IA están demasiado saturados analizando la base de datos en este momento. Por favor, intenta de nuevo en unos segundos. (Detalle técnico: {error_msg})"
         
         
 """ REGLAS ESTRICTAS PARA GENERAR GRÁFICAS:
