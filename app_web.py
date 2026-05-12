@@ -13,7 +13,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 st.set_page_config(page_title="Analista SSPP", page_icon="⚡", layout="wide")
 
 # Solo dejamos la ruta del logo (Eliminamos RUTA_EXCEL porque ya usamos la nube)
-RUTA_LOGO = "New Logo PACTIA.png"
+RUTA_LOGO = r"C:\Users\JoseGabrielBlandonHe\OneDrive - Pactia\01 JEFATURA PY\2. Energia\Proyecto SSPP\Diseños\New Logo PACTIA.png"
 
 #Estilos 
 st.markdown("""

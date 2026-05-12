@@ -57,7 +57,7 @@ def consultar_chatbot(pregunta, dataframe):
     - La Columna 1 SIEMPRE debe ser "Mes" (columna Mes_pago) (orden cronológico).    
     - Traer los datos de los meses que pida el usuario o si no pide nada traer 4 ulimos meses.  
     - MODO SERIES (Comparativa total): Si piden comparar o ver todos los edificios, usa múltiples columnas incluyendo TODOS los edificios. 
-    - Traer los datos que pida el usuario para El Valor en las series: consumo (columna Consumo_Total), costo (valor) (Columna "Subtotal") o CU (Columna CU_Total). Si no pide consumo o CU, traer datos del costo.
+    - Traer los datos que pida el usuario para El Valor en las series: consumo (columna: Consumo_Total), costo o gasto en pesos (Columna: valor) (Columna: "Subtotal") o CU (Columna: CU_Total). Si no pide consumo o CU, traer datos del costo.
     - REGLA CRÍTICA: PROHIBIDO RESUMIR. NO uses "etc". El JSON debe contener las columnas de TODOS los edificios sin omitir ninguno. Si la tabla de tu respuesta tiene 6 edificios, el JSON debe tener las 6 columnas de esos edificios.
     Gráfico torta:
     Pon el promedio de los 6 componentes exactos: Generación (CU_Generación), Transmisión (Cu_Transmisión), Distribución (CU_Transporte_Nacional + CU_Transporte_Regional), Comercialización (CU_Comercializacion), Restricciones (CU_Restricciones), Pérdidas (CU_Perdidas). 
@@ -83,7 +83,7 @@ def consultar_chatbot(pregunta, dataframe):
     for intento in range(max_reintentos):
         try:
             respuesta = cliente_ia.models.generate_content(
-                model='gemini-3.1-flash-lite', 
+                model='gemini-flash-latest',                  # gemini-flash-latest, gemini-flash-lite-latest, gemini-2.5-pro
                 contents=prompt_analisis
             )
             return respuesta.text
