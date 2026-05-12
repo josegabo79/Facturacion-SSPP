@@ -97,7 +97,7 @@ def consultar_chatbot(pregunta, dataframe):
                     continue       
             
             # Si definitivamente falló tras 3 intentos, devuelve error amigable
-            return "⚠️ Los servidores de IA están demasiado saturados analizando la base de datos en este momento. Por favor, intenta de nuevo en unos segundos." (error_msg)
+            return "⚠️ Los servidores de IA están demasiado saturados analizando la base de datos en este momento. Por favor, intenta de nuevo en unos segundos."
         
         
 """ REGLAS ESTRICTAS PARA GENERAR GRÁFICAS:
