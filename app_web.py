@@ -29,7 +29,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Solo dejamos la ruta del logo (Eliminamos RUTA_EXCEL porque ya usamos la nube)
-RUTA_LOGO = r"C:\Users\JoseGabrielBlandonHe\OneDrive - Pactia\01 JEFATURA PY\2. Energia\Proyecto SSPP\Diseños\New Logo PACTIA.png"
+RUTA_LOGO = "New Logo PACTIA.png"
 
 #Estilos 
 st.markdown("""
